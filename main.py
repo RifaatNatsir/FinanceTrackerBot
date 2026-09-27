@@ -20,14 +20,14 @@ def home():
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     text = (
-        "Halo! 👋 Saya bot pencatat keuangan cloud (Koyeb).\n\n"
-        "1️⃣ *Manual Input:*\n"
-        "Ketik: `[Pemasukan/Pengeluaran] [Nominal] [Deskripsi]`\n"
-        "Contoh: `Pengeluaran 50000 Makan`\n\n"
-        "2️⃣ *Upload Mutasi BNI:*\n"
+        "Halo! 👋 Saya bot pencatat keuangan cloud (Render).\n\n"
+        "1️⃣ <b>Manual Input:</b>\n"
+        "Ketik: <code>[Pemasukan/Pengeluaran] [Nominal] [Deskripsi]</code>\n"
+        "Contoh: <code>Pengeluaran 50000 Makan</code>\n\n"
+        "2️⃣ <b>Upload Mutasi BNI:</b>\n"
         "Kirim file CSV/Excel mutasi rekening Anda."
     )
-    bot.reply_to(message, text, parse_mode='Markdown')
+    bot.reply_to(message, text, parse_mode='HTML')
 
 @bot.message_handler(content_types=['document'])
 def handle_document(message):
@@ -63,8 +63,8 @@ def handle_document(message):
         
         if success:
             bot.edit_message_text(f"✅ Berhasil memproses {len(rows)} transaksi!\n\n"
-                                  f"📂 *Akses file pribadi Anda di sini:*\n{url}",
-                                  chat_id=message.chat.id, message_id=msg.message_id, parse_mode='Markdown')
+                                  f"📂 <b>Akses file pribadi Anda di sini:</b>\n<a href='{url}'>Buka File</a>",
+                                  chat_id=message.chat.id, message_id=msg.message_id, parse_mode='HTML', disable_web_page_preview=True)
             
     except Exception as e:
         bot.reply_to(message, f"❌ Terjadi kesalahan: {str(e)}")
@@ -80,12 +80,13 @@ def handle_text(message):
         success, url = append_row(row_data[0], row_data[1], row_data[2], row_data[3], message.from_user.id)
         
         if success:
-            bot.reply_to(message, f"✅ *Berhasil dicatat di Cloud!*\n\n"
+            desc = str(row_data[3]).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            bot.reply_to(message, f"✅ <b>Berhasil dicatat di Cloud!</b>\n\n"
                                   f"📌 Tipe: {row_data[1]}\n"
                                   f"💵 Nominal: {row_data[2]:,.0f}\n"
-                                  f"📝 Keterangan: {row_data[3]}\n\n"
-                                  f"📂 *File Sheets Anda:*\n[Buka File]({url})",
-                                  parse_mode='Markdown')
+                                  f"📝 Keterangan: {desc}\n\n"
+                                  f"📂 <b>File Sheets Anda:</b>\n<a href='{url}'>Buka File</a>",
+                                  parse_mode='HTML', disable_web_page_preview=True)
     except ValueError as e:
         bot.reply_to(message, f"⚠️ {str(e)}")
     except Exception as e:
