@@ -182,3 +182,9 @@ function doPost(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+// JALANKAN FUNGSI INI SEKALI SAJA DARI EDITOR UNTUK MEMANCING IZIN GOOGLE DRIVE
+function OtorisasiGoogleDrive() {
+  DriveApp.getFiles();
+  Logger.log("Izin Google Drive berhasil diberikan!");
+}

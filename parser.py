@@ -43,6 +43,44 @@ def parse_manual_input(text, message_timestamp=None):
     return [date_str, tipe, amount, description]
 
 def parse_bni_statement(file_bytes, filename):
+    # Coba baca sebagai format Standar (Kolom: Tanggal, Tipe, Nominal, Keterangan)
+    try:
+        if filename.endswith('.csv'):
+            df_std = pd.read_csv(io.BytesIO(file_bytes), sep=None, engine='python')
+        elif filename.endswith(('.xls', '.xlsx')):
+            df_std = pd.read_excel(io.BytesIO(file_bytes))
+            
+        cols = [str(c).strip().lower() for c in df_std.columns]
+        if 'tanggal' in cols and 'tipe' in cols and 'nominal' in cols and 'keterangan' in cols:
+            rows_to_append = []
+            for _, row in df_std.iterrows():
+                if pd.isna(row.get('Tanggal')):
+                    continue
+                    
+                tanggal = str(row['Tanggal']).strip()
+                tipe = str(row['Tipe']).strip().capitalize()
+                
+                nom_val = row['Nominal']
+                if isinstance(nom_val, (int, float)):
+                    amount = float(nom_val)
+                else:
+                    try:
+                        amount_str = str(nom_val).replace(',', '').replace('.', '')
+                        amount = float(amount_str)
+                    except ValueError:
+                        amount = 0.0
+                        
+                keterangan = str(row['Keterangan']).strip()
+                
+                if amount > 0 and tipe in ['Pemasukan', 'Pengeluaran']:
+                    rows_to_append.append([tanggal, tipe, amount, keterangan])
+                    
+            if rows_to_append:
+                return rows_to_append
+    except Exception:
+        pass
+
+    # Jika bukan format standar, lanjutkan ke parsing spesifik BNI Mutasi
     if filename.endswith('.csv'):
         try:
             df = pd.read_csv(io.BytesIO(file_bytes), sep=';', skiprows=4)
