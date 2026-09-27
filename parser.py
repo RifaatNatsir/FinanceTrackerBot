@@ -9,9 +9,9 @@ MONTH_MAP = {
     'Okt': 'Oct', 'Oct': 'Oct', 'Nov': 'Nov', 'Des': 'Dec', 'Dec': 'Dec'
 }
 
-def format_date_iso(dt):
-    # Output format yang mudah dibaca oleh Google Sheets: YYYY-MM-DD HH:MM:SS
-    return dt.strftime("%Y-%m-%d %H:%M:%S")
+def format_date(dt):
+    # Output: DD Mmm YYYY (HH:MM) -> contoh: 01 Aug 2026 (10:46)
+    return dt.strftime("%d %b %Y (%H:%M)")
 
 def parse_manual_input(text, message_timestamp=None):
     parts = text.strip().split(" ", 2)
@@ -38,7 +38,7 @@ def parse_manual_input(text, message_timestamp=None):
     else:
         dt = datetime.now()
         
-    date_str = format_date_iso(dt)
+    date_str = format_date(dt)
     
     return [date_str, tipe, amount, description]
 
@@ -79,9 +79,9 @@ def parse_bni_statement(file_bytes, filename):
             
         try:
             dt = datetime.strptime(f"{year}-{month_eng}-{day} {hour}:{minute}:{sec}", "%Y-%b-%d %H:%M:%S")
-            tanggal = format_date_iso(dt)
+            tanggal = format_date(dt)
         except Exception:
-            tanggal = f"{year}-{month_eng}-{day} {hour}:{minute}:{sec}"
+            tanggal = f"{day} {month_eng} {year} ({hour}:{minute})"
         
         amount = 0.0
         tipe = ''
