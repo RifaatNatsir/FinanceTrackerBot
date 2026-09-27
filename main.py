@@ -1,14 +1,21 @@
 import os
 import telebot
 import traceback
+import threading
+from flask import Flask
 from parser import parse_manual_input, parse_bni_statement
 from sheets_helper import append_row, append_multiple_rows
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 if not TELEGRAM_TOKEN:
-    raise ValueError("TELEGRAM_TOKEN environment variable not set. Please set it in Koyeb.")
+    raise ValueError("TELEGRAM_TOKEN environment variable not set. Please set it in Koyeb/Render.")
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot Keuangan BNI is running 24/7!"
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -82,6 +89,15 @@ def handle_text(message):
         bot.reply_to(message, f"❌ Terjadi kesalahan sistem: {str(e)}")
         traceback.print_exc()
 
-if __name__ == "__main__":
+def run_bot():
     print("Bot is running continuously in Cloud (Long Polling)...")
     bot.infinity_polling()
+
+if __name__ == "__main__":
+    # Jalankan bot di thread latar belakang
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.start()
+    
+    # Jalankan server web palsu (Flask) agar Render tidak mematikan aplikasi kita
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
