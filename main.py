@@ -90,6 +90,8 @@ def handle_text(message):
         traceback.print_exc()
 
 def run_bot():
+    print("Menghapus webhook lama (jika ada)...")
+    bot.remove_webhook()
     print("Bot is running continuously in Cloud (Long Polling)...")
     bot.infinity_polling()
 
