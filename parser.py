@@ -9,11 +9,11 @@ MONTH_MAP = {
     'Okt': 'Oct', 'Oct': 'Oct', 'Nov': 'Nov', 'Des': 'Dec', 'Dec': 'Dec'
 }
 
-def format_date(dt):
-    # Output: DD Mmm YYYY (HH:MM) -> contoh: 01 Aug 2026 (10:46)
-    return dt.strftime("%d %b %Y (%H:%M)")
+def format_date_iso(dt):
+    # Output format yang mudah dibaca oleh Google Sheets: YYYY-MM-DD HH:MM:SS
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
-def parse_manual_input(text):
+def parse_manual_input(text, message_timestamp=None):
     parts = text.strip().split(" ", 2)
     if len(parts) < 3:
         raise ValueError("Format tidak sesuai. Gunakan: [Pemasukan/Pengeluaran] [Nominal] [Deskripsi]")
@@ -29,7 +29,16 @@ def parse_manual_input(text):
         raise ValueError("Nominal harus berupa angka.")
         
     description = parts[2]
-    date_str = format_date(datetime.now())
+    
+    if message_timestamp:
+        # Konversi Unix Timestamp dari Telegram ke UTC+7 (WIB)
+        from datetime import timezone, timedelta
+        tz_wib = timezone(timedelta(hours=7))
+        dt = datetime.fromtimestamp(message_timestamp, tz=timezone.utc).astimezone(tz_wib)
+    else:
+        dt = datetime.now()
+        
+    date_str = format_date_iso(dt)
     
     return [date_str, tipe, amount, description]
 
@@ -70,9 +79,9 @@ def parse_bni_statement(file_bytes, filename):
             
         try:
             dt = datetime.strptime(f"{year}-{month_eng}-{day} {hour}:{minute}:{sec}", "%Y-%b-%d %H:%M:%S")
-            tanggal = format_date(dt)
+            tanggal = format_date_iso(dt)
         except Exception:
-            tanggal = f"{day} {month_eng} {year} ({hour}:{minute})"
+            tanggal = f"{year}-{month_eng}-{day} {hour}:{minute}:{sec}"
         
         amount = 0.0
         tipe = ''

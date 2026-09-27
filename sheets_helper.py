@@ -19,7 +19,11 @@ def append_row(date_str, type_str, amount, description, user_id):
     
     response = requests.post(GAS_URL, json=payload)
     if response.status_code == 200:
-        return True
+        resp_data = response.json()
+        if resp_data.get("status") == "success":
+            return True, resp_data.get("url")
+        else:
+            raise Exception(f"GAS Error: {resp_data.get('message')}")
     else:
         raise Exception(f"Gagal mengirim ke Google Apps Script: {response.text}")
 
@@ -47,6 +51,10 @@ def append_multiple_rows(rows, user_id):
     
     response = requests.post(GAS_URL, json=payload)
     if response.status_code == 200:
-        return True
+        resp_data = response.json()
+        if resp_data.get("status") == "success":
+            return True, resp_data.get("url")
+        else:
+            raise Exception(f"GAS Error: {resp_data.get('message')}")
     else:
         raise Exception(f"Gagal mengirim batch ke Google Apps Script: {response.text}")

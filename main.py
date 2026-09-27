@@ -59,11 +59,12 @@ def handle_document(message):
             return
             
         # Kirim data ke Google Apps Script (Webhook pengganti Google Cloud Console)
-        success = append_multiple_rows(rows, message.from_user.id)
+        success, url = append_multiple_rows(rows, message.from_user.id)
         
         if success:
-            bot.edit_message_text(f"✅ Berhasil memproses {len(rows)} transaksi & menyimpannya ke Google Sheets Anda!",
-                                  chat_id=message.chat.id, message_id=msg.message_id)
+            bot.edit_message_text(f"✅ Berhasil memproses {len(rows)} transaksi!\n\n"
+                                  f"📂 *Akses file pribadi Anda di sini:*\n{url}",
+                                  chat_id=message.chat.id, message_id=msg.message_id, parse_mode='Markdown')
             
     except Exception as e:
         bot.reply_to(message, f"❌ Terjadi kesalahan: {str(e)}")
@@ -72,17 +73,19 @@ def handle_document(message):
 @bot.message_handler(func=lambda message: True)
 def handle_text(message):
     try:
-        # Parsing teks
-        row_data = parse_manual_input(message.text)
+        # Parsing teks dengan mengirimkan waktu asli pengguna mengirim pesan
+        row_data = parse_manual_input(message.text, message_timestamp=message.date)
         
         # Kirim data ke Google Apps Script
-        append_row(row_data[0], row_data[1], row_data[2], row_data[3], message.from_user.id)
+        success, url = append_row(row_data[0], row_data[1], row_data[2], row_data[3], message.from_user.id)
         
-        bot.reply_to(message, f"✅ *Berhasil dicatat di Cloud!*\n\n"
-                              f"📌 Tipe: {row_data[1]}\n"
-                              f"💵 Nominal: {row_data[2]:,.0f}\n"
-                              f"📝 Keterangan: {row_data[3]}",
-                              parse_mode='Markdown')
+        if success:
+            bot.reply_to(message, f"✅ *Berhasil dicatat di Cloud!*\n\n"
+                                  f"📌 Tipe: {row_data[1]}\n"
+                                  f"💵 Nominal: {row_data[2]:,.0f}\n"
+                                  f"📝 Keterangan: {row_data[3]}\n\n"
+                                  f"📂 *File Sheets Anda:*\n[Buka File]({url})",
+                                  parse_mode='Markdown')
     except ValueError as e:
         bot.reply_to(message, f"⚠️ {str(e)}")
     except Exception as e:
