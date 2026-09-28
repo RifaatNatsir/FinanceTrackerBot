@@ -206,8 +206,16 @@ function doPost(e) {
         var summaryData = summarySheet.getDataRange().getValues();
         for (var i = 1; i < summaryData.length; i++) {
           if (summaryData[i][0]) {
+            var bulanVal = summaryData[i][0];
+            var bulanStr = "";
+            if (bulanVal instanceof Date) {
+              var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+              bulanStr = monthNames[bulanVal.getMonth()] + " " + bulanVal.getFullYear();
+            } else {
+              bulanStr = bulanVal.toString();
+            }
             results.push({
-              "bulan": summaryData[i][0].toString(),
+              "bulan": bulanStr,
               "pemasukan": parseFloat(summaryData[i][1]) || 0,
               "pengeluaran": parseFloat(summaryData[i][2]) || 0
             });
