@@ -58,3 +58,31 @@ def append_multiple_rows(rows, user_id):
             raise Exception(f"GAS Error: {resp_data.get('message')}")
     else:
         raise Exception(f"Gagal mengirim batch ke Google Apps Script: {response.text}")
+
+def set_setting(user_id, budget, reminder_time):
+    if not GAS_URL:
+        raise ValueError("GAS_WEBAPP_URL is not set.")
+    payload = {
+        "action": "set_setting",
+        "user_id": user_id,
+        "budget": budget,
+        "reminder_time": reminder_time
+    }
+    response = requests.post(GAS_URL, json=payload)
+    if response.status_code == 200:
+        return True
+    return False
+
+def get_reminders(hour):
+    if not GAS_URL:
+        raise ValueError("GAS_WEBAPP_URL is not set.")
+    payload = {
+        "action": "get_reminders",
+        "hour": str(hour)
+    }
+    response = requests.post(GAS_URL, json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("status") == "success":
+            return data.get("reminders", [])
+    return []

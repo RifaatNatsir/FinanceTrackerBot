@@ -131,6 +131,68 @@ function doPost(e) {
       }
     }
     
+    if (action === "set_setting") {
+      var budget = data.budget;
+      var reminder_time = data.reminder_time;
+      var settingKey = "settings_" + userId;
+      props.setProperty(settingKey, JSON.stringify({
+        budget: budget,
+        reminder_time: reminder_time
+      }));
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (action === "get_reminders") {
+      var hour = data.hour.toString();
+      var allProps = props.getProperties();
+      var reminders = [];
+      
+      var now = new Date();
+      var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      var currentMonthName = monthNames[now.getMonth()] + " " + now.getFullYear();
+      
+      for (var key in allProps) {
+        if (key.indexOf("settings_") === 0) {
+          var uId = key.split("_")[1];
+          var settingsStr = allProps[key];
+          try {
+            var settings = JSON.parse(settingsStr);
+            if (settings.reminder_time === hour) {
+               var userSsId = allProps[uId];
+               if (userSsId) {
+                  var userSs = SpreadsheetApp.openById(userSsId);
+                  var summarySheet = userSs.getSheetByName("Ringkasan Total");
+                  var pengeluaran = 0;
+                  
+                  if (summarySheet) {
+                    var summaryData = summarySheet.getDataRange().getValues();
+                    for (var i = 1; i < summaryData.length; i++) {
+                      if (summaryData[i][0] === currentMonthName) {
+                        pengeluaran = parseFloat(summaryData[i][2]) || 0;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  reminders.push({
+                    user_id: uId,
+                    budget: settings.budget,
+                    pengeluaran: pengeluaran
+                  });
+               }
+            }
+          } catch(e) {}
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success",
+        "reminders": reminders
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // Tambahkan kembali baris TOTAL di akhir setiap sheet yang dimodifikasi
     for (var s in modifiedSheets) {
       var sheet = ss.getSheetByName(s);
