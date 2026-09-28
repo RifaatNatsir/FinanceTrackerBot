@@ -193,6 +193,33 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
+    if (action === "get_summary_data") {
+      if (!ssId) {
+        return ContentService.createTextOutput(JSON.stringify({
+          "status": "error", "message": "Belum ada catatan keuangan yang terdaftar."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      var userSs = SpreadsheetApp.openById(ssId);
+      var summarySheet = userSs.getSheetByName("Ringkasan Total");
+      var results = [];
+      if (summarySheet) {
+        var summaryData = summarySheet.getDataRange().getValues();
+        for (var i = 1; i < summaryData.length; i++) {
+          if (summaryData[i][0]) {
+            results.push({
+              "bulan": summaryData[i][0].toString(),
+              "pemasukan": parseFloat(summaryData[i][1]) || 0,
+              "pengeluaran": parseFloat(summaryData[i][2]) || 0
+            });
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success",
+        "data": results
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // Tambahkan kembali baris TOTAL di akhir setiap sheet yang dimodifikasi
     for (var s in modifiedSheets) {
       var sheet = ss.getSheetByName(s);

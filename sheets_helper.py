@@ -86,3 +86,19 @@ def get_reminders(hour):
         if data.get("status") == "success":
             return data.get("reminders", [])
     return []
+
+def get_summary_data(user_id):
+    if not GAS_URL:
+        raise ValueError("GAS_WEBAPP_URL is not set.")
+    payload = {
+        "action": "get_summary_data",
+        "user_id": user_id
+    }
+    response = requests.post(GAS_URL, json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("status") == "success":
+            return data.get("data", [])
+        else:
+            raise Exception(data.get("message", "Unknown error"))
+    return []

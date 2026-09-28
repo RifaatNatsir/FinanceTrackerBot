@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from flask import Flask
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from parser import parse_manual_input, parse_bni_statement
-from sheets_helper import append_row, append_multiple_rows, set_setting, get_reminders
+from sheets_helper import append_row, append_multiple_rows, set_setting, get_reminders, get_summary_data
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 if not TELEGRAM_TOKEN:
@@ -72,6 +72,75 @@ def callback_time(call):
     else:
         text = "❌ Gagal menyimpan pengaturan ke Google Sheets."
         
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=text, parse_mode='HTML')
+
+user_summary_temp = {}
+
+@bot.message_handler(commands=['pemasukan', 'pengeluaran'])
+def command_check_summary(message):
+    cmd = message.text.replace('/', '').lower().split('@')[0]
+    try:
+        msg = bot.reply_to(message, "⏳ Mengambil data dari Cloud...")
+        data = get_summary_data(str(message.from_user.id))
+        
+        if not data:
+            bot.edit_message_text("Belum ada data keuangan yang tercatat.", chat_id=message.chat.id, message_id=msg.message_id)
+            return
+            
+        user_summary_temp[message.from_user.id] = data
+        
+        markup = InlineKeyboardMarkup()
+        markup.row_width = 2
+        buttons = []
+        for row in data:
+            bulan = row['bulan']
+            cb_data = f"sum_{'in' if cmd == 'pemasukan' else 'out'}_{bulan}"
+            buttons.append(InlineKeyboardButton(bulan, callback_data=cb_data))
+        markup.add(*buttons)
+        
+        bot.edit_message_text(f"Pilih bulan untuk melihat total <b>{cmd.capitalize()}</b>:", 
+                              chat_id=message.chat.id, message_id=msg.message_id, reply_markup=markup, parse_mode='HTML')
+    except Exception as e:
+        bot.edit_message_text(f"❌ Terjadi kesalahan: {str(e)}", chat_id=message.chat.id, message_id=msg.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('sum_'))
+def callback_summary(call):
+    parts = call.data.split('_', 2)
+    if len(parts) < 3: return
+    tipe_short = parts[1]
+    bulan = parts[2]
+    
+    tipe_str = "Pemasukan" if tipe_short == 'in' else "Pengeluaran"
+    data = user_summary_temp.get(call.from_user.id, [])
+    
+    nominal = 0
+    found = False
+    for row in data:
+        if row['bulan'] == bulan:
+            nominal = row['pemasukan'] if tipe_short == 'in' else row['pengeluaran']
+            found = True
+            break
+            
+    if not found:
+        bot.answer_callback_query(call.id, "Data sudah kadaluarsa. Silakan ketik perintah lagi.")
+        return
+        
+    is_current_month = False
+    try:
+        now = datetime.now(timezone(timedelta(hours=7)))
+        parts_b = bulan.split(" ")
+        month_names = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
+        if len(parts_b) == 2:
+            m_num = month_names.get(parts_b[0], 0)
+            y_num = int(parts_b[1])
+            if now.year == y_num and now.month == m_num:
+                is_current_month = True
+    except:
+        pass
+        
+    label = "Sementara" if is_current_month else "Total"
+    text = f"📊 <b>{label} {tipe_str}</b> Anda untuk bulan <b>{bulan}</b> adalah:\n\n<b>Rp {nominal:,.0f}</b>"
+    
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=text, parse_mode='HTML')
 
 @bot.message_handler(content_types=['document'])
