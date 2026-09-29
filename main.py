@@ -193,6 +193,9 @@ def callback_dl_format(call):
     try:
         ss_id, gid = get_export_info(str(call.from_user.id), bulan)
         
+        if not ss_id or gid is None:
+            raise ValueError("Gagal mendapatkan ID Spreadsheet. PASTIKAN Anda sudah meng-update dan DEPLOY ulang Google Apps Script ke versi terbaru!")
+            
         if fmt == "pdf":
             url = f"https://docs.google.com/spreadsheets/export?id={ss_id}&exportFormat=pdf&gid={gid}"
             filename = f"Laporan_Keuangan_{bulan}.pdf"
