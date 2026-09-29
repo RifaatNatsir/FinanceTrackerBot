@@ -7,8 +7,9 @@ from datetime import datetime, timezone, timedelta
 from flask import Flask
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from parser import parse_manual_input, parse_bni_statement
-from sheets_helper import append_row, append_multiple_rows, set_setting, get_reminders, get_summary_data
-
+from sheets_helper import append_row, append_multiple_rows, set_setting, get_reminders, get_summary_data, get_export_info
+import io
+import requests
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 if not TELEGRAM_TOKEN:
     raise ValueError("TELEGRAM_TOKEN environment variable not set. Please set it in Koyeb/Render.")
@@ -142,6 +143,75 @@ def callback_summary(call):
     text = f"📊 <b>{label} {tipe_str}</b> Anda untuk bulan <b>{bulan}</b> adalah:\n\n<b>Rp {nominal:,.0f}</b>"
     
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=text, parse_mode='HTML')
+
+@bot.message_handler(commands=['unduh', 'export'])
+def command_unduh(message):
+    try:
+        msg = bot.reply_to(message, "⏳ Mengambil daftar bulan dari Cloud...")
+        data = get_summary_data(str(message.from_user.id))
+        
+        if not data:
+            bot.edit_message_text("Belum ada data keuangan yang tercatat.", chat_id=message.chat.id, message_id=msg.message_id)
+            return
+            
+        markup = InlineKeyboardMarkup()
+        markup.row_width = 2
+        buttons = []
+        for row in data:
+            bulan = row['bulan']
+            cb_data = f"dl_{bulan}"
+            buttons.append(InlineKeyboardButton(bulan, callback_data=cb_data))
+        markup.add(*buttons)
+        
+        bot.edit_message_text("Pilih bulan yang ingin Anda unduh laporannya:", 
+                              chat_id=message.chat.id, message_id=msg.message_id, reply_markup=markup, parse_mode='HTML')
+    except Exception as e:
+        bot.edit_message_text(f"❌ Terjadi kesalahan: {str(e)}", chat_id=message.chat.id, message_id=msg.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('dl_'))
+def callback_dl_bulan(call):
+    bulan = call.data.split('_', 1)[1]
+    
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 2
+    markup.add(
+        InlineKeyboardButton("📄 PDF", callback_data=f"fmt_pdf_{bulan}"),
+        InlineKeyboardButton("📊 Excel (.xlsx)", callback_data=f"fmt_xlsx_{bulan}")
+    )
+    
+    bot.edit_message_text(f"Pilih format file untuk laporan bulan <b>{bulan}</b>:", 
+                          chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('fmt_'))
+def callback_dl_format(call):
+    parts = call.data.split('_', 2)
+    fmt = parts[1] # 'pdf' or 'xlsx'
+    bulan = parts[2]
+    
+    bot.edit_message_text(f"⏳ Sedang membuat file {fmt.upper()} untuk {bulan}...", chat_id=call.message.chat.id, message_id=call.message.message_id)
+    
+    try:
+        ss_id, gid = get_export_info(str(call.from_user.id), bulan)
+        
+        if fmt == "pdf":
+            url = f"https://docs.google.com/spreadsheets/d/{ss_id}/export?format=pdf&size=A4&portrait=true&fitw=true&gridlines=false&printtitle=false&sheetnames=false&pagenum=UNDEFINED&attachment=true&gid={gid}"
+            filename = f"Laporan_Keuangan_{bulan}.pdf"
+        else:
+            url = f"https://docs.google.com/spreadsheets/d/{ss_id}/export?format=xlsx&gid={gid}"
+            filename = f"Laporan_Keuangan_{bulan}.xlsx"
+            
+        response = requests.get(url)
+        if response.status_code == 200:
+            file_stream = io.BytesIO(response.content)
+            file_stream.name = filename
+            
+            bot.send_document(call.message.chat.id, file_stream, caption=f"✅ Laporan <b>{bulan}</b> berhasil diunduh!", parse_mode='HTML')
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        else:
+            bot.edit_message_text("❌ Gagal mengunduh file dari Google Sheets.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            
+    except Exception as e:
+        bot.edit_message_text(f"❌ Terjadi kesalahan: {str(e)}", chat_id=call.message.chat.id, message_id=call.message.message_id)
 
 @bot.message_handler(content_types=['document'])
 def handle_document(message):

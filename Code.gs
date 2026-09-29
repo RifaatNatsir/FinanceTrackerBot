@@ -228,6 +228,29 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
+    if (action === "get_export_info") {
+      var bulan = data.bulan;
+      if (!ssId) {
+        return ContentService.createTextOutput(JSON.stringify({
+          "status": "error", "message": "Belum ada catatan keuangan yang terdaftar."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      var userSs = SpreadsheetApp.openById(ssId);
+      var exportSheet = userSs.getSheetByName(bulan);
+      
+      if (!exportSheet) {
+        return ContentService.createTextOutput(JSON.stringify({
+          "status": "error", "message": "Bulan " + bulan + " tidak ditemukan."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success",
+        "ss_id": ssId,
+        "gid": exportSheet.getSheetId()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // Tambahkan kembali baris TOTAL di akhir setiap sheet yang dimodifikasi
     for (var s in modifiedSheets) {
       var sheet = ss.getSheetByName(s);

@@ -102,3 +102,20 @@ def get_summary_data(user_id):
         else:
             raise Exception(data.get("message", "Unknown error"))
     return []
+
+def get_export_info(user_id, bulan):
+    if not GAS_URL:
+        raise ValueError("GAS_WEBAPP_URL is not set.")
+    payload = {
+        "action": "get_export_info",
+        "user_id": user_id,
+        "bulan": bulan
+    }
+    response = requests.post(GAS_URL, json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("status") == "success":
+            return data.get("ss_id"), data.get("gid")
+        else:
+            raise Exception(data.get("message", "Unknown error"))
+    raise Exception("Failed to contact GAS")
