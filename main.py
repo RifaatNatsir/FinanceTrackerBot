@@ -194,16 +194,16 @@ def callback_dl_format(call):
         ss_id, gid = get_export_info(str(call.from_user.id), bulan)
         
         if fmt == "pdf":
-            url = f"https://docs.google.com/spreadsheets/d/{ss_id}/export?format=pdf&size=A4&portrait=true&fitw=true&gridlines=false&printtitle=false&sheetnames=false&pagenum=UNDEFINED&attachment=true&gid={gid}"
+            url = f"https://docs.google.com/spreadsheets/export?id={ss_id}&exportFormat=pdf&gid={gid}"
             filename = f"Laporan_Keuangan_{bulan}.pdf"
         else:
-            url = f"https://docs.google.com/spreadsheets/d/{ss_id}/export?format=xlsx&gid={gid}"
+            url = f"https://docs.google.com/spreadsheets/export?id={ss_id}&exportFormat=xlsx&gid={gid}"
             filename = f"Laporan_Keuangan_{bulan}.xlsx"
             
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
         }
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, allow_redirects=True)
         
         if response.status_code == 200:
             if 'text/html' in response.headers.get('Content-Type', '').lower():
