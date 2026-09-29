@@ -200,15 +200,23 @@ def callback_dl_format(call):
             url = f"https://docs.google.com/spreadsheets/d/{ss_id}/export?format=xlsx&gid={gid}"
             filename = f"Laporan_Keuangan_{bulan}.xlsx"
             
-        response = requests.get(url)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        response = requests.get(url, headers=headers)
+        
         if response.status_code == 200:
+            if 'text/html' in response.headers.get('Content-Type', '').lower():
+                bot.edit_message_text("❌ Gagal mengunduh. Akses file Spreadsheet Anda masih <b>Terkunci (Private)</b>.\n\nSilakan buka file Spreadsheet Anda, klik tombol <b>Bagikan (Share)</b>, lalu ubah akses menjadi <b>'Siapa saja yang memiliki link' (Anyone with the link)</b>.", chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML')
+                return
+                
             file_stream = io.BytesIO(response.content)
             file_stream.name = filename
             
             bot.send_document(call.message.chat.id, file_stream, caption=f"✅ Laporan <b>{bulan}</b> berhasil diunduh!", parse_mode='HTML')
             bot.delete_message(call.message.chat.id, call.message.message_id)
         else:
-            bot.edit_message_text("❌ Gagal mengunduh file dari Google Sheets.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            bot.edit_message_text(f"❌ Gagal mengunduh file dari Google Sheets. (Error {response.status_code})\nPastikan akses file adalah 'Siapa saja yang memiliki link'.", chat_id=call.message.chat.id, message_id=call.message.message_id)
             
     except Exception as e:
         bot.edit_message_text(f"❌ Terjadi kesalahan: {str(e)}", chat_id=call.message.chat.id, message_id=call.message.message_id)
